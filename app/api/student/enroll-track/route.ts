@@ -1,25 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-import { createSupabaseServerClient } from "@/lib/supabase-server";
-
-const adminSupabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { adminSupabase, getUserFromRequest } from "@/lib/supabase-server";
 
 const ALLOWED_PAYMENT_METHODS = ["cash_wallet", "instapay"];
 
 export async function POST(req: NextRequest) {
   try {
+    const { user, error: userError } = await getUserFromRequest(req);
+
+    if (!user) {
+      return NextResponse.json(
+        { error: userError || "You must be logged in to enroll" },
+        { status: 401 }
+      );
+    }
+
     const body = await req.json();
 
-    const courseId = body.courseId;
+    const trackId = body.trackId;
     const paymentMethod = body.paymentMethod;
     const paymentReference = body.paymentReference ?? null;
     const paymentNotes = body.paymentNotes ?? null;
 
-    if (!courseId) {
-      return NextResponse.json({ error: "courseId is required" }, { status: 400 });
+    if (!trackId) {
+      return NextResponse.json({ error: "trackId is required" }, { status: 400 });
     }
 
     if (!ALLOWED_PAYMENT_METHODS.includes(paymentMethod)) {
@@ -27,17 +30,6 @@ export async function POST(req: NextRequest) {
         { error: "paymentMethod must be cash_wallet or instapay" },
         { status: 400 }
       );
-    }
-
-    const supabase =  createSupabaseServerClient();
-
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { data: profile, error: profileError } = await adminSupabase
@@ -52,7 +44,7 @@ export async function POST(req: NextRequest) {
 
     if (profile.role !== "student" && profile.role !== "admin") {
       return NextResponse.json(
-        { error: "Only students can enroll in courses" },
+        { error: "Only students can enroll in tracks" },
         { status: 403 }
       );
     }
@@ -64,20 +56,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { data: course } = await adminSupabase
-      .from("courses")
-      .select("id, title, name, is_free, price")
-      .eq("id", courseId)
+    const { data: track } = await adminSupabase
+      .from("tracks")
+      .select("id, title, name, price")
+      .eq("id", trackId)
       .single();
 
-    if (!course) {
-      return NextResponse.json({ error: "Course not found" }, { status: 404 });
+    if (!track) {
+      return NextResponse.json({ error: "Track not found" }, { status: 404 });
     }
 
     const { data: existing } = await adminSupabase
-      .from("course_enrollments")
+      .from("track_enrollments")
       .select("id, enrollment_status, payment_status")
-      .eq("course_id", courseId)
+      .eq("track_id", trackId)
       .eq("student_id", user.id)
       .maybeSingle();
 
@@ -90,16 +82,16 @@ export async function POST(req: NextRequest) {
     }
 
     const { data, error } = await adminSupabase
-      .from("course_enrollments")
+      .from("track_enrollments")
       .insert([
         {
-          course_id: courseId,
+          track_id: trackId,
           student_id: user.id,
-          payment_method: course.is_free ? "cash_wallet" : paymentMethod,
+          payment_method: paymentMethod,
           payment_reference: paymentReference,
           payment_notes: paymentNotes,
-          payment_status: course.is_free ? "approved" : "submitted",
-          enrollment_status: course.is_free ? "approved" : "pending",
+          payment_status: "submitted",
+          enrollment_status: "pending",
         },
       ])
       .select()
@@ -107,21 +99,19 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       return NextResponse.json(
-        { error: error.message || "Failed to create enrollment request" },
+        { error: error.message || "Failed to create track enrollment request" },
         { status: 500 }
       );
     }
 
     return NextResponse.json({
       success: true,
-      message: course.is_free
-        ? "You have been enrolled successfully"
-        : "Enrollment request submitted successfully",
+      message: "Track enrollment request submitted successfully",
       enrollment: data,
     });
   } catch {
     return NextResponse.json(
-      { error: "Failed to create enrollment request" },
+      { error: "Failed to create track enrollment request" },
       { status: 500 }
     );
   }

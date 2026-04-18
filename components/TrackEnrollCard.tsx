@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 type Props = {
   trackId: string;
@@ -17,38 +18,52 @@ export default function TrackEnrollCard({
   const [paymentReference, setPaymentReference] = useState("");
   const [paymentNotes, setPaymentNotes] = useState("");
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState("");
-  const [error, setError] = useState("");
 
   async function handleEnroll() {
     try {
       setLoading(true);
-      setSuccess("");
-      setError("");
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session?.access_token) {
+        alert("Please login first");
+        window.location.href = "/login";
+        return;
+      }
 
       const res = await fetch("/api/student/enroll-track", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
-          track_id: trackId,
+          trackId,
           paymentMethod,
-          paymentReference,
-          paymentNotes,
+          paymentReference: paymentReference || null,
+          paymentNotes: paymentNotes || null,
         }),
       });
 
       const data = await res.json();
 
-      if (!res.ok) {
-        setError(data.error || "Failed to submit track enrollment");
+      if (res.status === 401) {
+        alert("Session expired. Please login again.");
+        window.location.href = "/login";
         return;
       }
 
-      setSuccess(data.message || "Track enrollment request submitted");
-    } catch {
-      setError("Failed to submit track enrollment");
+      if (!res.ok) {
+        alert(data.error || "Failed to enroll in track");
+        return;
+      }
+
+      alert(data.message || "Track enrollment submitted successfully");
+    } catch (error) {
+      console.error(error);
+      alert("Something went wrong");
     } finally {
       setLoading(false);
     }
@@ -65,75 +80,48 @@ export default function TrackEnrollCard({
       </h2>
 
       <p className="mt-3 text-sm leading-7 text-[var(--memz-muted)]">
-        Submit payment details to join this track and follow all included courses.
+        Submit your payment details to join this track.
       </p>
 
-      <div className="mt-5">
+      <div className="mt-4">
         <span className="rounded-full bg-[var(--memz-soft)] px-4 py-2 text-sm font-medium">
           ${price ?? 0}
         </span>
       </div>
 
       <div className="mt-6 grid gap-4">
-        <div>
-          <label className="mb-2 block text-sm font-medium text-[var(--memz-text)]">
-            Payment Method
-          </label>
-          <select
-            value={paymentMethod}
-            onChange={(e) => setPaymentMethod(e.target.value)}
-            className="w-full rounded-2xl border border-[var(--memz-border)] bg-white px-4 py-3 outline-none"
-          >
-            <option value="cash_wallet">Cash Wallet</option>
-            <option value="instapay">Instapay</option>
-          </select>
-        </div>
+        <select
+          value={paymentMethod}
+          onChange={(e) => setPaymentMethod(e.target.value)}
+          className="rounded-2xl border border-[var(--memz-border)] px-4 py-3"
+        >
+          <option value="cash_wallet">Cash Wallet</option>
+          <option value="instapay">Instapay</option>
+        </select>
 
-        <div>
-          <label className="mb-2 block text-sm font-medium text-[var(--memz-text)]">
-            Payment Reference
-          </label>
-          <input
-            type="text"
-            value={paymentReference}
-            onChange={(e) => setPaymentReference(e.target.value)}
-            placeholder="Transaction ID / reference number"
-            className="w-full rounded-2xl border border-[var(--memz-border)] bg-white px-4 py-3 outline-none"
-          />
-        </div>
+        <input
+          type="text"
+          value={paymentReference}
+          onChange={(e) => setPaymentReference(e.target.value)}
+          placeholder="Payment reference"
+          className="rounded-2xl border border-[var(--memz-border)] px-4 py-3"
+        />
 
-        <div>
-          <label className="mb-2 block text-sm font-medium text-[var(--memz-text)]">
-            Payment Notes
-          </label>
-          <textarea
-            value={paymentNotes}
-            onChange={(e) => setPaymentNotes(e.target.value)}
-            placeholder="Any extra note about your payment"
-            rows={4}
-            className="w-full rounded-2xl border border-[var(--memz-border)] bg-white px-4 py-3 outline-none"
-          />
-        </div>
+        <textarea
+          value={paymentNotes}
+          onChange={(e) => setPaymentNotes(e.target.value)}
+          placeholder="Payment notes"
+          rows={4}
+          className="rounded-2xl border border-[var(--memz-border)] px-4 py-3"
+        />
 
         <button
           onClick={handleEnroll}
           disabled={loading}
-          className="rounded-2xl bg-gradient-to-r from-[var(--memz-primary)] to-[var(--memz-secondary)] px-5 py-3 font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-2xl bg-gradient-to-r from-[var(--memz-primary)] to-[var(--memz-secondary)] px-5 py-3 font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
         >
           {loading ? "Submitting..." : "Pay & Enroll"}
         </button>
-
-        {success ? (
-          <div className="rounded-2xl border border-green-200 bg-green-50 p-4 text-sm text-green-700">
-            {success}
-          </div>
-        ) : null}
-
-        {error ? (
-          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            {error}
-          </div>
-        ) : null}
       </div>
     </div>
   );

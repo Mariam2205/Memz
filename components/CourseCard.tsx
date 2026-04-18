@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { supabase } from "@/lib/supabase";
 
 type Course = {
   id: string;
@@ -15,22 +16,34 @@ type Course = {
 export default function CourseCard({ course }: { course: Course }) {
   async function handleEnroll() {
     try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session?.access_token) {
+        alert("Please login first");
+        window.location.href = "/login";
+        return;
+      }
+
       const res = await fetch("/api/student/enroll-course", {
         method: "POST",
-        credentials: "include", // 🔥 VERY IMPORTANT
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           courseId: course.id,
           paymentMethod: course.is_free ? "cash_wallet" : "instapay",
+          paymentReference: null,
+          paymentNotes: null,
         }),
       });
 
       const data = await res.json();
 
       if (res.status === 401) {
-        alert("Session expired or not logged in");
+        alert("Session expired. Please login again.");
         window.location.href = "/login";
         return;
       }
@@ -40,7 +53,7 @@ export default function CourseCard({ course }: { course: Course }) {
         return;
       }
 
-      alert("Enrollment request submitted ✅");
+      alert(data.message || "Enrollment request submitted successfully");
     } catch (error) {
       console.error(error);
       alert("Something went wrong");
@@ -56,9 +69,7 @@ export default function CourseCard({ course }: { course: Course }) {
       </h2>
 
       <p className="mt-3 text-sm text-[var(--memz-muted)]">
-        {course.description ||
-          course.short_description ||
-          "No description yet."}
+        {course.description || course.short_description || "No description yet."}
       </p>
 
       <div className="mt-5 flex items-center justify-between">
@@ -66,7 +77,7 @@ export default function CourseCard({ course }: { course: Course }) {
           className={`rounded-full px-3 py-1 text-sm font-medium ${
             course.is_free
               ? "bg-green-100 text-green-600"
-              : "bg-[var(--memz-soft)]"
+              : "bg-[var(--memz-soft)] text-[var(--memz-text)]"
           }`}
         >
           {course.is_free ? "Free" : `$${course.price ?? 0}`}
@@ -76,14 +87,14 @@ export default function CourseCard({ course }: { course: Course }) {
       <div className="mt-5 flex gap-3">
         <Link
           href={`/courses/${course.id}`}
-          className="rounded-xl bg-gradient-to-r from-[var(--memz-primary)] to-[var(--memz-secondary)] px-4 py-2 text-sm font-semibold text-white"
+          className="rounded-xl bg-gradient-to-r from-[var(--memz-primary)] to-[var(--memz-secondary)] px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
         >
           View
         </Link>
 
         <button
           onClick={handleEnroll}
-          className="rounded-xl border border-[var(--memz-border)] px-4 py-2 text-sm font-semibold text-[var(--memz-primary)] hover:bg-[var(--memz-soft)]"
+          className="rounded-xl border border-[var(--memz-border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--memz-primary)] transition hover:bg-[var(--memz-soft)]"
         >
           Enroll
         </button>

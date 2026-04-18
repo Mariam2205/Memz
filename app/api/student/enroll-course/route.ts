@@ -1,16 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-import { createSupabaseServerClient } from "@/lib/supabase-server";
-
-const adminSupabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { adminSupabase, getUserFromRequest } from "@/lib/supabase-server";
 
 const ALLOWED_PAYMENT_METHODS = ["cash_wallet", "instapay"];
 
 export async function POST(req: NextRequest) {
   try {
+    const { user, error: userError } = await getUserFromRequest(req);
+
+    if (!user) {
+      return NextResponse.json(
+        { error: userError || "You must be logged in to enroll" },
+        { status: 401 }
+      );
+    }
+
     const body = await req.json();
 
     const courseId = body.courseId;
@@ -28,19 +31,6 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-const supabase = createSupabaseServerClient();
-    
-
-    const {
-  data: { user },
-} = await supabase.auth.getUser();
-
-if (!user) {
-  return NextResponse.json(
-    { error: "You must be logged in to enroll" },
-    { status: 401 }
-  );
-}
 
     const { data: profile, error: profileError } = await adminSupabase
       .from("profiles")

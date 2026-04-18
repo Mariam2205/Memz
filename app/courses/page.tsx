@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
 import CourseCard from "@/components/CourseCard";
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -30,9 +30,7 @@ export default async function CoursesPage() {
             Explore Memz
           </p>
 
-          <h1 className="mt-4 text-4xl font-bold sm:text-5xl">
-            Courses
-          </h1>
+          <h1 className="mt-4 text-4xl font-bold sm:text-5xl">Courses</h1>
 
           <p className="mt-4 text-lg leading-8 text-[var(--memz-muted)]">
             Browse all available courses at Memz Academy and start your journey.
@@ -58,4 +56,3 @@ export default async function CoursesPage() {
     </main>
   );
 }
-
