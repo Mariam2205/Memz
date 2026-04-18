@@ -87,11 +87,11 @@ export async function POST(req: NextRequest) {
         {
           course_id: courseId,
           student_id: user.id,
-          payment_method: course.is_free ? "cash_wallet" : paymentMethod,
+          payment_method: paymentMethod,
           payment_reference: paymentReference,
           payment_notes: paymentNotes,
-          payment_status: course.is_free ? "approved" : "submitted",
-          enrollment_status: course.is_free ? "approved" : "pending",
+          payment_status: "submitted",
+          enrollment_status: "pending",
         },
       ])
       .select()
@@ -106,9 +106,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: course.is_free
-        ? "You have been enrolled successfully"
-        : "Enrollment request submitted successfully",
+      message: "Enrollment request submitted successfully and is pending admin approval",
       enrollment: data,
     });
   } catch {

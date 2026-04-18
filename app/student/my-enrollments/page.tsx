@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import RoleGuard from "@/components/RoleGuard";
+import { supabase } from "@/lib/supabase";
 
 type EnrollmentItem = {
   id: string;
@@ -48,7 +49,22 @@ export default function MyEnrollmentsPage() {
       setLoading(true);
       setError("");
 
-      const res = await fetch("/api/student/my-enrollments");
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session?.access_token) {
+        setError("Please login first");
+        setLoading(false);
+        return;
+      }
+
+      const res = await fetch("/api/student/my-enrollments", {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
       const data = await res.json();
 
       if (!res.ok) {
@@ -101,7 +117,7 @@ export default function MyEnrollmentsPage() {
               <div className="rounded-3xl border border-[var(--memz-border)] bg-white p-8 shadow-sm">
                 <div className="mb-6 flex items-center justify-between">
                   <h2 className="text-2xl font-bold text-[var(--memz-text)]">
-                    Enrolled Courses
+                    Course Enrollments
                   </h2>
                   <span className="rounded-full bg-[var(--memz-soft)] px-4 py-1 text-sm text-[var(--memz-primary)]">
                     {courseEnrollments.length}
@@ -110,14 +126,13 @@ export default function MyEnrollmentsPage() {
 
                 {courseEnrollments.length === 0 ? (
                   <p className="text-[var(--memz-muted)]">
-                    You have not enrolled in any courses yet.
+                    You have not requested any course enrollments yet.
                   </p>
                 ) : (
                   <div className="grid gap-5 md:grid-cols-2">
                     {courseEnrollments.map((item) => {
                       const course = item.course_id ? courseMap.get(item.course_id) : null;
-                      const title =
-                        course?.title || course?.name || "Untitled Course";
+                      const title = course?.title || course?.name || "Untitled Course";
 
                       return (
                         <div
@@ -190,7 +205,7 @@ export default function MyEnrollmentsPage() {
               <div className="rounded-3xl border border-[var(--memz-border)] bg-white p-8 shadow-sm">
                 <div className="mb-6 flex items-center justify-between">
                   <h2 className="text-2xl font-bold text-[var(--memz-text)]">
-                    Enrolled Tracks
+                    Track Enrollments
                   </h2>
                   <span className="rounded-full bg-[var(--memz-soft)] px-4 py-1 text-sm text-[var(--memz-secondary)]">
                     {trackEnrollments.length}
@@ -199,14 +214,13 @@ export default function MyEnrollmentsPage() {
 
                 {trackEnrollments.length === 0 ? (
                   <p className="text-[var(--memz-muted)]">
-                    You have not enrolled in any tracks yet.
+                    You have not requested any track enrollments yet.
                   </p>
                 ) : (
                   <div className="grid gap-5 md:grid-cols-2">
                     {trackEnrollments.map((item) => {
                       const track = item.track_id ? trackMap.get(item.track_id) : null;
-                      const title =
-                        track?.title || track?.name || "Untitled Track";
+                      const title = track?.title || track?.name || "Untitled Track";
 
                       return (
                         <div

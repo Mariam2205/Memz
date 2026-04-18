@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: "Track enrollment request submitted successfully",
+      message: "Track enrollment request submitted successfully and is pending admin approval",
       enrollment: data,
     });
   } catch {
