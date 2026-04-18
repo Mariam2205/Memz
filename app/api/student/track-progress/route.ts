@@ -1,29 +1,54 @@
-import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { NextRequest, NextResponse } from "next/server";
+import { adminSupabase, getUserFromRequest } from "@/lib/supabase-server";
 
-const adminSupabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const supabase = createSupabaseServerClient();
+    const { user, error: userError } = await getUserFromRequest(req);
 
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json(
+        { error: userError || "Unauthorized" },
+        { status: 401 }
+      );
+    }
 
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const { data: profile, error: profileError } = await adminSupabase
+      .from("profiles")
+      .select("id, role, approved")
+      .eq("id", user.id)
+      .single();
+
+    if (profileError || !profile) {
+      return NextResponse.json({ error: "Profile not found" }, { status: 404 });
+    }
+
+    if (profile.role !== "student" && profile.role !== "admin") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    if (profile.approved === false) {
+      return NextResponse.json(
+        { error: "Your account is not approved yet" },
+        { status: 403 }
+      );
     }
 
     const { data: trackEnrollments, error: trackEnrollmentsError } =
       await adminSupabase
         .from("track_enrollments")
-        .select("*")
+        .select(`
+          id,
+          track_id,
+          student_id,
+          created_at,
+          payment_method,
+          payment_status,
+          payment_reference,
+          payment_notes,
+          approved_by,
+          approved_at,
+          enrollment_status
+        `)
         .eq("student_id", user.id)
         .order("created_at", { ascending: false });
 
@@ -69,7 +94,7 @@ export async function GET() {
       }
 
       trackCourses = trackCoursesData || [];
-      courseIds = [...new Set(trackCourses.map((row) => row.course_id))];
+      courseIds = [...new Set(trackCourses.map((row: any) => row.course_id))];
     }
 
     let courses: any[] = [];
@@ -94,7 +119,19 @@ export async function GET() {
       const { data: courseEnrollmentsData, error: courseEnrollmentsError } =
         await adminSupabase
           .from("course_enrollments")
-          .select("*")
+          .select(`
+            id,
+            course_id,
+            student_id,
+            created_at,
+            payment_method,
+            payment_status,
+            payment_reference,
+            payment_notes,
+            approved_by,
+            approved_at,
+            enrollment_status
+          `)
           .eq("student_id", user.id)
           .in("course_id", courseIds);
 
