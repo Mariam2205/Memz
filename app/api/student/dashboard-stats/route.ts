@@ -1,22 +1,17 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { getUserFromRequest } from "@/lib/supabase-server";
 
 const adminSupabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const supabase = createSupabaseServerClient();
+    const { user, error } = await getUserFromRequest(request);
 
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    if (error || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -65,6 +60,7 @@ export async function GET() {
     const sessionIds = (sessions || []).map((item) => item.id);
 
     let assignments: any[] = [];
+
     if (sessionIds.length > 0) {
       const { data: assignmentRows } = await adminSupabase
         .from("assignments")
@@ -77,6 +73,7 @@ export async function GET() {
     const assignmentIds = assignments.map((item) => item.id);
 
     let submissions: any[] = [];
+
     if (assignmentIds.length > 0) {
       const { data: submissionRows } = await adminSupabase
         .from("submissions")

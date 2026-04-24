@@ -12,18 +12,19 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const { data: profile, error: profileError } = await adminSupabase
+    const { data: profile } = await adminSupabase
       .from("profiles")
       .select("id, role, approved")
       .eq("id", user.id)
-      .single();
+      .maybeSingle();
 
-    if (profileError || !profile) {
-      return NextResponse.json({ error: "Profile not found" }, { status: 404 });
-    }
-
-    if (profile.role !== "student" && profile.role !== "admin") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (!profile) {
+      return NextResponse.json({
+        courseEnrollments: [],
+        trackEnrollments: [],
+        courses: [],
+        tracks: [],
+      });
     }
 
     if (profile.approved === false) {
@@ -33,57 +34,17 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const { data: courseEnrollments, error: courseEnrollmentsError } =
-      await adminSupabase
-        .from("course_enrollments")
-        .select(`
-          id,
-          course_id,
-          student_id,
-          created_at,
-          payment_method,
-          payment_status,
-          payment_reference,
-          payment_notes,
-          approved_by,
-          approved_at,
-          enrollment_status
-        `)
-        .eq("student_id", user.id)
-        .order("created_at", { ascending: false });
+    const { data: courseEnrollments } = await adminSupabase
+      .from("course_enrollments")
+      .select("*")
+      .eq("student_id", user.id)
+      .order("created_at", { ascending: false });
 
-    if (courseEnrollmentsError) {
-      return NextResponse.json(
-        { error: courseEnrollmentsError.message || "Failed to load course enrollments" },
-        { status: 500 }
-      );
-    }
-
-    const { data: trackEnrollments, error: trackEnrollmentsError } =
-      await adminSupabase
-        .from("track_enrollments")
-        .select(`
-          id,
-          track_id,
-          student_id,
-          created_at,
-          payment_method,
-          payment_status,
-          payment_reference,
-          payment_notes,
-          approved_by,
-          approved_at,
-          enrollment_status
-        `)
-        .eq("student_id", user.id)
-        .order("created_at", { ascending: false });
-
-    if (trackEnrollmentsError) {
-      return NextResponse.json(
-        { error: trackEnrollmentsError.message || "Failed to load track enrollments" },
-        { status: 500 }
-      );
-    }
+    const { data: trackEnrollments } = await adminSupabase
+      .from("track_enrollments")
+      .select("*")
+      .eq("student_id", user.id)
+      .order("created_at", { ascending: false });
 
     const courseIds = (courseEnrollments || []).map((item) => item.course_id);
     const trackIds = (trackEnrollments || []).map((item) => item.track_id);
@@ -92,35 +53,21 @@ export async function GET(req: NextRequest) {
     let tracks: any[] = [];
 
     if (courseIds.length > 0) {
-      const { data: coursesData, error: coursesError } = await adminSupabase
+      const { data } = await adminSupabase
         .from("courses")
         .select("*")
         .in("id", courseIds);
 
-      if (coursesError) {
-        return NextResponse.json(
-          { error: coursesError.message || "Failed to load courses" },
-          { status: 500 }
-        );
-      }
-
-      courses = coursesData || [];
+      courses = data || [];
     }
 
     if (trackIds.length > 0) {
-      const { data: tracksData, error: tracksError } = await adminSupabase
+      const { data } = await adminSupabase
         .from("tracks")
         .select("*")
         .in("id", trackIds);
 
-      if (tracksError) {
-        return NextResponse.json(
-          { error: tracksError.message || "Failed to load tracks" },
-          { status: 500 }
-        );
-      }
-
-      tracks = tracksData || [];
+      tracks = data || [];
     }
 
     return NextResponse.json({
