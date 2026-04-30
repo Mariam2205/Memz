@@ -7,6 +7,8 @@ const links = [
   { href: "/admin", label: "Dashboard" },
   { href: "/admin/users", label: "Users" },
   { href: "/admin/courses", label: "Courses" },
+  { href: "/admin/enrollments", label: "Enrollment Requests" },
+  { href: "/admin/course-videos", label: "Course Videos" },
   { href: "/admin/sessions", label: "Sessions" },
   { href: "/admin/assignments", label: "Assignments" },
   { href: "/admin/tracks", label: "Tracks" },
@@ -25,24 +27,23 @@ export default function AdminSidebar() {
   }
 
   return (
-    <aside className="w-full rounded-3xl border border-[var(--memz-border)] bg-white p-4 shadow-sm lg:w-72">
-      <div className="mb-4 px-2">
-        <h2 className="text-lg font-bold text-[var(--memz-text)]">
-          Admin Panel
-        </h2>
-        <p className="text-sm text-[var(--memz-muted)]">
-          Manage Memz Academy structure
-        </p>
-      </div>
+    <aside className="min-h-screen w-full border-r border-[var(--memz-border)] bg-white p-5 md:w-72">
+      <h2 className="text-2xl font-bold text-[var(--memz-text)]">
+        Admin Panel
+      </h2>
 
-      <nav className="flex flex-col gap-2">
+      <p className="mt-1 text-sm text-[var(--memz-muted)]">
+        Manage Memz Academy structure
+      </p>
+
+      <nav className="mt-6 grid gap-2">
         {links.map((link) => (
           <Link
             key={link.href}
             href={link.href}
-            className={`rounded-2xl px-4 py-3 text-sm font-medium transition ${
+            className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${
               isActive(link.href)
-                ? "bg-[var(--memz-soft)] text-[var(--memz-primary)]"
+                ? "bg-[var(--memz-primary)] text-white"
                 : "text-[var(--memz-text)] hover:bg-[var(--memz-soft)]"
             }`}
           >
