@@ -1,180 +1,152 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
 type Props = {
   courseId: string;
-  courseTitle?: string | null;
-  isFree?: boolean | null;
-  price?: number | null;
+  enrollmentStatus?: string | null;
+  paymentStatus?: string | null;
 };
 
 export default function CourseEnrollCard({
   courseId,
-  courseTitle,
-  isFree,
-  price,
+  enrollmentStatus,
+  paymentStatus,
 }: Props) {
-  const [paymentMethod, setPaymentMethod] = useState("cash_wallet");
-  const [paymentReference, setPaymentReference] = useState("");
-  const [paymentNotes, setPaymentNotes] = useState("");
+  const [method, setMethod] = useState("vodafone_cash");
+  const [reference, setReference] = useState("");
+  const [notes, setNotes] = useState("");
+  const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState("");
-  const [error, setError] = useState("");
 
-  async function handleEnroll() {
+  const isApproved = enrollmentStatus === "approved";
+
+  async function enroll() {
     try {
       setLoading(true);
-      setSuccess("");
-      setError("");
+      setMessage("");
 
       const {
         data: { session },
       } = await supabase.auth.getSession();
 
-      if (!session?.access_token) {
-        window.location.href = "/login";
+      if (!session) {
+        setMessage("Please login first.");
         return;
       }
 
-      const res = await fetch("/api/student/enroll-course", {
+      const res = await fetch("/api/enrollments", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
-          courseId,
-          paymentMethod,
-          paymentReference: paymentReference || null,
-          paymentNotes: paymentNotes || null,
+          course_id: courseId,
+          payment_method: method,
+          payment_reference: reference,
+          payment_notes: notes,
         }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "Failed to submit enrollment");
+        setMessage(data.error || "Failed to enroll.");
         return;
       }
 
-      setSuccess(
-        data.message ||
-          "Enrollment request submitted successfully. You can now see it in My Enrollments."
-      );
+      setMessage("Enrollment request sent. Wait for admin approval.");
+      window.location.reload();
     } catch {
-      setError("Failed to submit enrollment");
+      setMessage("Failed to enroll.");
     } finally {
       setLoading(false);
     }
   }
 
+  if (isApproved) {
+    return (
+      <div className="rounded-3xl border border-[var(--memz-border)] bg-white p-6 shadow-sm">
+        <h3 className="text-xl font-bold text-[var(--memz-text)]">
+          You are enrolled
+        </h3>
+        <p className="mt-2 text-[var(--memz-muted)]">
+          You can now view the course videos.
+        </p>
+      </div>
+    );
+  }
+
+  if (enrollmentStatus === "pending") {
+    return (
+      <div className="rounded-3xl border border-yellow-200 bg-yellow-50 p-6 shadow-sm">
+        <h3 className="text-xl font-bold text-yellow-800">
+          Enrollment pending
+        </h3>
+        <p className="mt-2 text-yellow-700">
+          Payment: {paymentStatus || "pending"}. Wait for admin approval.
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <section className="mt-8 rounded-[32px] border border-[var(--memz-border)] bg-white p-8 shadow-sm">
-      <p className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-[var(--memz-primary)]">
-        Payment Details
+    <div className="rounded-3xl border border-[var(--memz-border)] bg-white p-6 shadow-sm">
+      <h3 className="text-xl font-bold text-[var(--memz-text)]">
+        Enroll in this course
+      </h3>
+
+      <p className="mt-2 text-sm text-[var(--memz-muted)]">
+        Add your payment details, then admin will approve your enrollment.
       </p>
 
-      <h2 className="text-2xl font-bold">
-        Enroll in {courseTitle || "this course"}
-      </h2>
+      <div className="mt-4 space-y-3">
+        <select
+          value={method}
+          onChange={(e) => setMethod(e.target.value)}
+          className="w-full rounded-2xl border border-[var(--memz-border)] px-4 py-3 outline-none"
+        >
+          <option value="vodafone_cash">Vodafone Cash</option>
+          <option value="instapay">InstaPay</option>
+          <option value="bank_transfer">Bank Transfer</option>
+          <option value="cash">Cash</option>
+        </select>
 
-      <p className="mt-3 text-sm leading-7 text-[var(--memz-muted)]">
-        Submit your payment details here. After submitting, this course will
-        appear in your My Enrollments page with pending status until admin
-        approval.
-      </p>
+        <input
+          value={reference}
+          onChange={(e) => setReference(e.target.value)}
+          placeholder="Payment reference / phone number"
+          className="w-full rounded-2xl border border-[var(--memz-border)] px-4 py-3 outline-none"
+        />
 
-      <div className="mt-5 rounded-2xl border border-[var(--memz-border)] bg-[var(--memz-soft)] p-4">
-        <p className="font-semibold">
-          Amount: {isFree ? "Free" : `$${price ?? 0}`}
-        </p>
-        <p className="mt-2 text-sm text-[var(--memz-muted)]">
-          Payment status after submitting: submitted
-        </p>
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Payment notes"
+          className="w-full rounded-2xl border border-[var(--memz-border)] px-4 py-3 outline-none"
+        />
+
+        <button
+          type="button"
+          onClick={enroll}
+          disabled={loading}
+          className="w-full rounded-2xl bg-gradient-to-r from-[var(--memz-primary)] to-[var(--memz-secondary)] px-5 py-3 font-semibold text-white disabled:opacity-60"
+        >
+          {loading ? "Sending..." : "Request Enrollment"}
+        </button>
+
+        <Link
+          href="/login"
+          className="block text-center text-sm font-semibold text-[var(--memz-primary)]"
+        >
+          Login first if you are not signed in
+        </Link>
+
+        {message ? <p className="text-sm text-[var(--memz-primary)]">{message}</p> : null}
       </div>
-
-      {!isFree ? (
-        <div className="mt-5 rounded-2xl border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">
-          <p className="font-semibold">Payment instructions</p>
-          <p className="mt-2">
-            Pay using Cash Wallet or Instapay, then paste the transaction
-            reference below.
-          </p>
-        </div>
-      ) : null}
-
-      <div className="mt-6 space-y-4">
-        <label className="block">
-          <span className="mb-2 block text-sm font-semibold">
-            Payment Method
-          </span>
-          <select
-            value={paymentMethod}
-            onChange={(e) => setPaymentMethod(e.target.value)}
-            className="w-full rounded-2xl border border-[var(--memz-border)] bg-white px-4 py-3 outline-none"
-          >
-            <option value="cash_wallet">Cash Wallet</option>
-            <option value="instapay">Instapay</option>
-          </select>
-        </label>
-
-        <label className="block">
-          <span className="mb-2 block text-sm font-semibold">
-            Payment Reference
-          </span>
-          <input
-            value={paymentReference}
-            onChange={(e) => setPaymentReference(e.target.value)}
-            placeholder="Transaction ID / reference number"
-            className="w-full rounded-2xl border border-[var(--memz-border)] bg-white px-4 py-3 outline-none"
-          />
-        </label>
-
-        <label className="block">
-          <span className="mb-2 block text-sm font-semibold">
-            Payment Notes
-          </span>
-          <textarea
-            value={paymentNotes}
-            onChange={(e) => setPaymentNotes(e.target.value)}
-            placeholder="Any extra note about your payment"
-            rows={4}
-            className="w-full rounded-2xl border border-[var(--memz-border)] bg-white px-4 py-3 outline-none"
-          />
-        </label>
-
-        <div className="flex flex-wrap gap-3">
-          <button
-            onClick={handleEnroll}
-            disabled={loading}
-            className="rounded-2xl bg-gradient-to-r from-[var(--memz-primary)] to-[var(--memz-secondary)] px-5 py-3 font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {loading ? "Submitting..." : isFree ? "Enroll Now" : "Pay & Enroll"}
-          </button>
-
-          <Link
-            href="/student/my-enrollments"
-            className="rounded-2xl border border-[var(--memz-border)] bg-white px-5 py-3 font-semibold"
-          >
-            My Enrollments
-          </Link>
-        </div>
-
-        {success ? (
-          <div className="rounded-2xl border border-green-200 bg-green-50 p-4 text-sm text-green-700">
-            {success}
-          </div>
-        ) : null}
-
-        {error ? (
-          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            {error}
-          </div>
-        ) : null}
-      </div>
-    </section>
+    </div>
   );
 }

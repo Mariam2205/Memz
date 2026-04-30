@@ -1,24 +1,28 @@
 import Link from "next/link";
-import { adminSupabase } from "@/lib/supabase-server";
+import { cookies } from "next/headers";
+import { createServerClient } from "@supabase/ssr";
 import CourseEnrollCard from "@/components/CourseEnrollCard";
 
-type Assignment = {
-  id: string;
-  title: string | null;
-  description: string | null;
-  due_at: string | null;
-  max_grade: number | null;
-  session_id: string;
-};
+function getYouTubeEmbedUrl(url: string) {
+  try {
+    const parsed = new URL(url);
+    let id = "";
 
-type Session = {
-  id: string;
-  title: string | null;
-  name: string | null;
-  description: string | null;
-  course_id: string;
-  assignments: Assignment[];
-};
+    if (parsed.hostname.includes("youtu.be")) {
+      id = parsed.pathname.replace("/", "");
+    }
+
+    if (parsed.hostname.includes("youtube.com")) {
+      id = parsed.searchParams.get("v") || "";
+    }
+
+    if (!id) return null;
+
+    return `https://www.youtube.com/embed/${id}`;
+  } catch {
+    return null;
+  }
+}
 
 export default async function CourseDetailsPage({
   params,
@@ -27,7 +31,26 @@ export default async function CourseDetailsPage({
 }) {
   const { courseId } = await params;
 
-  const { data: course } = await adminSupabase
+  const cookieStore = await cookies();
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll() {},
+      },
+    }
+  );
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { data: course } = await supabase
     .from("courses")
     .select("*")
     .eq("id", courseId)
@@ -35,214 +58,149 @@ export default async function CourseDetailsPage({
 
   if (!course) {
     return (
-      <main className="memz-page bg-[var(--memz-page-bg)] text-[var(--memz-text)]">
-        <div className="memz-container">
-          <Link
-            href="/courses"
-            className="inline-flex rounded-2xl border border-[var(--memz-border)] bg-white px-4 py-2 text-sm font-medium"
-          >
-            ← Back to Courses
-          </Link>
-
-          <div className="mt-8 rounded-2xl border border-red-200 bg-red-50 p-5 text-red-700">
-            Course not found.
-          </div>
-        </div>
+      <main className="min-h-screen bg-[var(--memz-page-bg)] px-4 py-10">
+        <Link href="/courses">← Back to Courses</Link>
+        <p className="mt-6">Course not found.</p>
       </main>
     );
   }
 
-  const { data: sessionsData } = await adminSupabase
-    .from("sessions")
-    .select("id, title, name, description, course_id, created_at")
-    .eq("course_id", courseId)
-    .order("created_at", { ascending: true });
+  let enrollment: any = null;
 
-  const sessionIds = (sessionsData || []).map((session) => session.id);
+  if (user) {
+    const { data } = await supabase
+      .from("course_enrollments")
+      .select("*")
+      .eq("course_id", courseId)
+      .eq("student_id", user.id)
+      .maybeSingle();
 
-  let assignments: Assignment[] = [];
-
-  if (sessionIds.length > 0) {
-    const { data: assignmentData } = await adminSupabase
-      .from("assignments")
-      .select("id, title, description, due_at, max_grade, session_id, created_at")
-      .in("session_id", sessionIds)
-      .order("created_at", { ascending: true });
-
-    assignments = (assignmentData || []) as Assignment[];
+    enrollment = data;
   }
 
-  const assignmentsBySession = new Map<string, Assignment[]>();
+  const isApproved = enrollment?.enrollment_status === "approved";
 
-  assignments.forEach((assignment) => {
-    const list = assignmentsBySession.get(assignment.session_id) || [];
-    list.push(assignment);
-    assignmentsBySession.set(assignment.session_id, list);
-  });
-
-  const sessions: Session[] = (sessionsData || []).map((session) => ({
-    ...session,
-    assignments: assignmentsBySession.get(session.id) || [],
-  }));
+  const { data: videos } = isApproved
+    ? await supabase
+        .from("course_videos")
+        .select("*")
+        .eq("course_id", courseId)
+        .eq("is_published", true)
+        .order("video_order", { ascending: true })
+    : { data: [] };
 
   return (
-    <main className="memz-page bg-[var(--memz-page-bg)] text-[var(--memz-text)]">
-      <div className="memz-container">
-        <Link
-          href="/courses"
-          className="inline-flex rounded-2xl border border-[var(--memz-border)] bg-white px-4 py-2 text-sm font-medium"
-        >
+    <main className="min-h-screen bg-[var(--memz-page-bg)] px-4 py-10">
+      <div className="mx-auto max-w-5xl space-y-8">
+        <Link href="/courses" className="font-semibold text-[var(--memz-primary)]">
           ← Back to Courses
         </Link>
 
-        <section className="mt-8 rounded-[32px] border border-[var(--memz-border)] bg-white p-8 shadow-sm">
-          <p className="mb-4 inline-flex rounded-2xl bg-[var(--memz-soft)] px-3 py-1 text-xs font-semibold text-[var(--memz-primary)]">
+        <section className="rounded-3xl border border-[var(--memz-border)] bg-white p-8 shadow-sm">
+          <p className="text-sm font-semibold text-[var(--memz-primary)]">
             Course Details
           </p>
 
-          <h1 className="text-4xl font-bold sm:text-5xl">
+          <h1 className="mt-3 text-4xl font-bold text-[var(--memz-text)]">
             {course.title || course.name || "Untitled Course"}
           </h1>
 
-          <p className="mt-4 max-w-3xl text-base leading-8 text-[var(--memz-muted)]">
-            {course.description ||
-              course.short_description ||
-              "No description available yet."}
-          </p>
+          <div
+            className="prose mt-4 max-w-none text-[var(--memz-muted)]"
+            dangerouslySetInnerHTML={{
+              __html:
+                course.description_html ||
+                course.description ||
+                "<p>No description available yet.</p>",
+            }}
+          />
 
-          <div className="mt-6 flex flex-wrap gap-3">
-            <span className="rounded-full bg-[var(--memz-soft)] px-4 py-2 text-sm font-medium">
+          <div className="mt-6 flex flex-wrap gap-3 text-sm">
+            <span className="rounded-full bg-[var(--memz-soft)] px-4 py-2 font-semibold">
               {course.is_free ? "Free" : `$${course.price ?? 0}`}
-              <div className="mt-6 grid gap-3 rounded-2xl border border-white/10 bg-white/5 p-5 text-white/80">
-  <p>
-    <strong>Payment Way:</strong>{" "}
-    {course.pricing_type === "level"
-      ? "By Level"
-      : course.pricing_type === "month"
-      ? "Monthly"
-      : "By Course"}
-  </p>
-
-  <p>
-    <strong>Age Category:</strong> {course.age_category || "Not added yet"}
-  </p>
-
-  <p>
-    <strong>Starting Date:</strong>{" "}
-    {course.starting_date
-      ? new Date(course.starting_date).toLocaleDateString()
-      : "Not added yet"}
-  </p>
-
-  <div>
-    <strong>Level Description:</strong>
-    <p>{course.level_description || "Not added yet"}</p>
-  </div>
-
-  <div>
-    <strong>Course Objectives:</strong>
-    <p>{course.course_objectives || "Not added yet"}</p>
-  </div>
-</div>
             </span>
 
-            <span className="rounded-full bg-yellow-100 px-4 py-2 text-sm font-medium text-yellow-800">
-              Videos locked until enrollment approval
-            </span>
+            {course.age_category ? (
+              <span className="rounded-full bg-[var(--memz-soft)] px-4 py-2 font-semibold">
+                Age: {course.age_category}
+              </span>
+            ) : null}
+
+            {course.starting_date ? (
+              <span className="rounded-full bg-[var(--memz-soft)] px-4 py-2 font-semibold">
+                Starts: {new Date(course.starting_date).toLocaleDateString()}
+              </span>
+            ) : null}
           </div>
         </section>
 
         <CourseEnrollCard
           courseId={courseId}
-          courseTitle={course.title || course.name}
-          isFree={course.is_free}
-          price={course.price}
+          enrollmentStatus={enrollment?.enrollment_status || null}
+          paymentStatus={enrollment?.payment_status || null}
         />
 
-        <section className="mt-8 rounded-[32px] border border-[var(--memz-border)] bg-white p-8 shadow-sm">
-          <div className="mb-6 flex items-center justify-between">
-            <h2 className="text-2xl font-bold">Sessions</h2>
-            <span className="rounded-full bg-[var(--memz-soft)] px-4 py-1 text-sm font-medium text-[var(--memz-primary)]">
-              {sessions.length}
-            </span>
+        {!user ? (
+          <div className="rounded-3xl border border-[var(--memz-border)] bg-white p-6 shadow-sm">
+            <p className="font-semibold">Login to enroll and view videos.</p>
           </div>
+        ) : null}
 
-          {sessions.length === 0 ? (
-            <p className="text-[var(--memz-muted)]">
-              No sessions found for this course yet.
+        {isApproved ? (
+          <section className="rounded-3xl border border-[var(--memz-border)] bg-white p-8 shadow-sm">
+            <h2 className="text-2xl font-bold">Course Videos</h2>
+
+            {!videos || videos.length === 0 ? (
+              <p className="mt-4 text-[var(--memz-muted)]">
+                No videos added yet.
+              </p>
+            ) : (
+              <div className="mt-6 space-y-6">
+                {videos.map((video: any) => {
+                  const embedUrl = getYouTubeEmbedUrl(video.youtube_url);
+
+                  return (
+                    <div
+                      key={video.id}
+                      className="rounded-3xl border border-[var(--memz-border)] bg-[var(--memz-soft)] p-5"
+                    >
+                      <h3 className="text-xl font-bold">{video.title}</h3>
+                      {video.description ? (
+                        <p className="mt-2 text-sm text-[var(--memz-muted)]">
+                          {video.description}
+                        </p>
+                      ) : null}
+
+                      {embedUrl ? (
+                        <iframe
+                          className="mt-4 aspect-video w-full rounded-2xl"
+                          src={embedUrl}
+                          title={video.title}
+                          allowFullScreen
+                        />
+                      ) : (
+                        <a
+                          href={video.youtube_url}
+                          target="_blank"
+                          className="mt-4 inline-block font-semibold text-[var(--memz-primary)]"
+                        >
+                          Open Video
+                        </a>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        ) : (
+          <section className="rounded-3xl border border-[var(--memz-border)] bg-white p-8 shadow-sm">
+            <h2 className="text-2xl font-bold">Course Videos</h2>
+            <p className="mt-3 text-[var(--memz-muted)]">
+              Videos are locked until your enrollment is approved.
             </p>
-          ) : (
-            <div className="space-y-5">
-              {sessions.map((session) => (
-                <div
-                  key={session.id}
-                  className="rounded-3xl border border-[var(--memz-border)] bg-[var(--memz-soft)] p-5"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <h3 className="text-xl font-semibold">
-                      {session.title || session.name || "Untitled Session"}
-                    </h3>
-
-                    <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
-                      Preview only
-                    </span>
-                  </div>
-
-                  <p className="mt-3 text-sm leading-7 text-[var(--memz-muted)]">
-                    {session.description || "No session description yet."}
-                  </p>
-
-                  <div className="mt-4 rounded-2xl border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800">
-                    Session video is locked until your enrollment is approved.
-                  </div>
-
-                  <div className="mt-5">
-                    <h4 className="text-sm font-semibold uppercase tracking-wide text-[var(--memz-primary)]">
-                      Assignments
-                    </h4>
-
-                    {session.assignments.length > 0 ? (
-                      <div className="mt-3 grid gap-3 md:grid-cols-2">
-                        {session.assignments.map((assignment) => (
-                          <div
-                            key={assignment.id}
-                            className="rounded-2xl border border-[var(--memz-border)] bg-white p-4"
-                          >
-                            <h5 className="font-semibold">
-                              {assignment.title || "Untitled Assignment"}
-                            </h5>
-
-                            <p className="mt-2 text-sm text-[var(--memz-muted)]">
-                              {assignment.description ||
-                                "No assignment description yet."}
-                            </p>
-
-                            <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                              <span className="rounded-full bg-[var(--memz-soft)] px-3 py-1">
-                                Max Grade: {assignment.max_grade ?? "-"}
-                              </span>
-
-                              <span className="rounded-full bg-[var(--memz-soft)] px-3 py-1">
-                                Due:{" "}
-                                {assignment.due_at
-                                  ? new Date(assignment.due_at).toLocaleString()
-                                  : "-"}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="mt-3 text-sm text-[var(--memz-muted)]">
-                        No assignments in this session.
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
+          </section>
+        )}
       </div>
     </main>
   );

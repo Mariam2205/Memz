@@ -18,6 +18,13 @@ type Course = {
   display_description?: string;
   subject_id?: string | null;
   level_id?: string | null;
+  price?: number | null;
+is_free?: boolean | null;
+pricing_type?: string | null;
+level_description?: string | null;
+age_category?: string | null;
+course_objectives?: string | null;
+starting_date?: string | null;
 };
 
 type Subject = {
@@ -41,6 +48,13 @@ export default function AdminCoursesPage() {
   const [descriptionHtml, setDescriptionHtml] = useState("");
   const [subjectId, setSubjectId] = useState("");
   const [levelId, setLevelId] = useState("");
+  const [price, setPrice] = useState("0");
+const [isFree, setIsFree] = useState(true);
+const [pricingType, setPricingType] = useState("course");
+const [levelDescription, setLevelDescription] = useState("");
+const [ageCategory, setAgeCategory] = useState("");
+const [courseObjectives, setCourseObjectives] = useState("");
+const [startingDate, setStartingDate] = useState("");
   const [search, setSearch] = useState("");
   const [editingId, setEditingId] = useState("");
   const [message, setMessage] = useState("");
@@ -109,6 +123,13 @@ export default function AdminCoursesPage() {
     setDescriptionHtml("");
     setSubjectId("");
     setLevelId("");
+    setPrice("0");
+setIsFree(true);
+setPricingType("course");
+setLevelDescription("");
+setAgeCategory("");
+setCourseObjectives("");
+setStartingDate("");
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -129,6 +150,13 @@ export default function AdminCoursesPage() {
         descriptionHtml,
         subject_id: subjectId || null,
         level_id: levelId || null,
+        price: isFree ? 0 : Number(price || 0),
+is_free: isFree,
+pricing_type: pricingType,
+level_description: levelDescription,
+age_category: ageCategory,
+course_objectives: courseObjectives,
+starting_date: startingDate || null,
       };
 
       const res = await fetch("/api/admin/courses", {
@@ -257,7 +285,134 @@ export default function AdminCoursesPage() {
                   </option>
                 ))}
               </select>
+<div className="grid gap-4 md:grid-cols-2">
+  <select
+    value={subjectId}
+    onChange={(e) => setSubjectId(e.target.value)}
+    className="w-full rounded-2xl border border-[var(--memz-border)] px-4 py-3 outline-none"
+  >
+    <option value="">Select Subject (optional)</option>
+    {subjects.map((subject) => (
+      <option key={subject.id} value={subject.id}>
+        {subject.title || subject.name || "Untitled Subject"}
+      </option>
+    ))}
+  </select>
 
+  <select
+    value={levelId}
+    onChange={(e) => setLevelId(e.target.value)}
+    className="w-full rounded-2xl border border-[var(--memz-border)] px-4 py-3 outline-none"
+  >
+    <option value="">Select Level (optional)</option>
+    {levels.map((level) => (
+      <option key={level.id} value={level.id}>
+        {level.title || level.name || "Untitled Level"}
+      </option>
+    ))}
+  </select>
+</div>
+
+<div className="grid gap-4 sm:grid-cols-2">
+  <label className="flex items-center gap-3 rounded-2xl border border-[var(--memz-border)] px-4 py-3">
+    <input
+      type="checkbox"
+      checked={isFree}
+      onChange={(e) => setIsFree(e.target.checked)}
+    />
+    <span className="text-sm font-semibold">Free course</span>
+  </label>
+
+  <select
+    value={pricingType}
+    onChange={(e) => setPricingType(e.target.value)}
+    className="w-full rounded-2xl border border-[var(--memz-border)] px-4 py-3 outline-none"
+  >
+    <option value="course">By Course</option>
+    <option value="level">By Level</option>
+    <option value="month">Monthly</option>
+  </select>
+</div>
+
+{!isFree ? (
+  <input
+    type="number"
+    min="0"
+    step="0.01"
+    value={price}
+    onChange={(e) => setPrice(e.target.value)}
+    placeholder="Course price"
+    className="w-full rounded-2xl border border-[var(--memz-border)] px-4 py-3 outline-none"
+  />
+) : null}
+
+<input
+  value={ageCategory}
+  onChange={(e) => setAgeCategory(e.target.value)}
+  placeholder="Age Category e.g. 8-12 years"
+  className="w-full rounded-2xl border border-[var(--memz-border)] px-4 py-3 outline-none"
+/>
+
+<input
+  type="date"
+  value={startingDate}
+  onChange={(e) => setStartingDate(e.target.value)}
+  className="w-full rounded-2xl border border-[var(--memz-border)] px-4 py-3 outline-none"
+/>
+
+<RichTextEditor
+  label="Level Description"
+  value={levelDescription}
+  onChange={setLevelDescription}
+  placeholder="Write the level description..."
+/>
+
+<RichTextEditor
+  label="Course Objectives"
+  value={courseObjectives}
+  onChange={setCourseObjectives}
+  placeholder="Write course objectives..."
+/>
+
+{!isFree ? (
+  <input
+    type="number"
+    min="0"
+    step="0.01"
+    value={price}
+    onChange={(e) => setPrice(e.target.value)}
+    placeholder="Course price"
+    className="w-full rounded-2xl border border-[var(--memz-border)] px-4 py-3 outline-none"
+  />
+) : null}
+
+<input
+  value={ageCategory}
+  onChange={(e) => setAgeCategory(e.target.value)}
+  placeholder="Age Category e.g. 8-12 years"
+  className="w-full rounded-2xl border border-[var(--memz-border)] px-4 py-3 outline-none"
+/>
+
+<input
+  type="date"
+  value={startingDate}
+  onChange={(e) => setStartingDate(e.target.value)}
+  className="w-full rounded-2xl border border-[var(--memz-border)] px-4 py-3 outline-none"
+/>
+
+<textarea
+  value={levelDescription}
+  onChange={(e) => setLevelDescription(e.target.value)}
+  placeholder="Level Description"
+  className="w-full rounded-2xl border border-[var(--memz-border)] px-4 py-3 outline-none"
+/>
+
+<textarea
+  value={courseObjectives}
+  onChange={(e) => setCourseObjectives(e.target.value)}
+  placeholder="Course Objectives"
+  className="w-full rounded-2xl border border-[var(--memz-border)] px-4 py-3 outline-none"
+/>
               <select
                 value={levelId}
                 onChange={(e) => setLevelId(e.target.value)}
@@ -336,7 +491,19 @@ export default function AdminCoursesPage() {
                             "<p>No description yet.</p>",
                         }}
                       />
+{course.level_description ? (
+  <div
+    className="prose prose-sm mt-3 max-w-none text-[var(--memz-muted)]"
+    dangerouslySetInnerHTML={{ __html: course.level_description }}
+  />
+) : null}
 
+{course.course_objectives ? (
+  <div
+    className="prose prose-sm mt-3 max-w-none text-[var(--memz-muted)]"
+    dangerouslySetInnerHTML={{ __html: course.course_objectives }}
+  />
+) : null}
                       <div className="mt-4 flex flex-wrap gap-2 text-xs">
                         <span className="rounded-full bg-white px-3 py-1">
                           {subject?.title || subject?.name || "No Subject"}
