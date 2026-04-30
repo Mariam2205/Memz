@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import { useParams } from "next/navigation";
+import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 const PAYMENT_NUMBER = "01274408307";
@@ -32,7 +32,9 @@ export default function CourseEnrollPage() {
       .from("payment-screenshots")
       .upload(fileName, screenshot);
 
-    if (error) throw new Error(error.message);
+    if (error) {
+      throw new Error(error.message);
+    }
 
     const { data } = supabase.storage
       .from("payment-screenshots")
@@ -43,10 +45,11 @@ export default function CourseEnrollPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
-    setMessage("");
 
     try {
+      setLoading(true);
+      setMessage("");
+
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -58,6 +61,11 @@ export default function CourseEnrollPage() {
 
       if (!payerName.trim()) {
         setMessage("Please write payer name.");
+        return;
+      }
+
+      if (!walletNumber.trim()) {
+        setMessage("Please write sender wallet / phone number.");
         return;
       }
 
@@ -100,7 +108,8 @@ export default function CourseEnrollPage() {
 
       setMessage("Enrollment request sent successfully. Wait for admin approval.");
     } catch (error) {
-      const msg = error instanceof Error ? error.message : "Something went wrong.";
+      const msg =
+        error instanceof Error ? error.message : "Something went wrong.";
       setMessage(msg);
     } finally {
       setLoading(false);
@@ -123,13 +132,18 @@ export default function CourseEnrollPage() {
           </h1>
 
           <div className="mt-5 rounded-2xl bg-[var(--memz-soft)] p-5">
-            <p className="font-bold">Payment Details</p>
-            <p className="mt-2 text-sm">
-              Vodafone Cash / Wallet Number:
-              <span className="ml-2 font-bold">{PAYMENT_NUMBER}</span>
+            <p className="font-bold text-[var(--memz-text)]">
+              Payment Details
             </p>
+
+            <p className="mt-2 text-sm text-[var(--memz-text)]">
+              Vodafone Cash / Wallet Number:{" "}
+              <span className="font-bold">{PAYMENT_NUMBER}</span>
+            </p>
+
             <p className="mt-1 text-sm text-[var(--memz-muted)]">
               You can pay using Vodafone Cash, InstaPay, or any wallet transfer.
+              After payment, submit your transfer details below.
             </p>
           </div>
 
@@ -168,7 +182,7 @@ export default function CourseEnrollPage() {
             />
 
             <div>
-              <label className="mb-2 block text-sm font-semibold">
+              <label className="mb-2 block text-sm font-semibold text-[var(--memz-text)]">
                 Transfer Time
               </label>
               <input
@@ -180,7 +194,7 @@ export default function CourseEnrollPage() {
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-semibold">
+              <label className="mb-2 block text-sm font-semibold text-[var(--memz-text)]">
                 Payment Screenshot
               </label>
               <input

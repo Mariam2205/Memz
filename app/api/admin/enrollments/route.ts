@@ -1,68 +1,99 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-const adminSupabase = createClient(
+const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export async function GET() {
+function getBearerToken(req: NextRequest) {
+  const auth = req.headers.get("authorization") || "";
+  return auth.replace("Bearer ", "");
+}
+
+export async function POST(req: NextRequest) {
   try {
-    const { data, error } = await adminSupabase
+    const token = getBearerToken(req);
+
+    if (!token) {
+      return NextResponse.json({ error: "Not logged in" }, { status: 401 });
+    }
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabaseAdmin.auth.getUser(token);
+
+    if (userError || !user) {
+      return NextResponse.json({ error: "Invalid session" }, { status: 401 });
+    }
+
+    const body = await req.json();
+
+    const course_id = body.course_id;
+    const payment_method = body.payment_method || "manual";
+    const payer_name = body.payer_name || null;
+    const wallet_number = body.wallet_number || null;
+    const payment_reference = body.payment_reference || null;
+    const payment_notes = body.payment_notes || null;
+    const payment_screenshot_url = body.payment_screenshot_url || null;
+    const transfer_time = body.transfer_time || null;
+
+    if (!course_id) {
+      return NextResponse.json(
+        { error: "Course id is required" },
+        { status: 400 }
+      );
+    }
+
+    const { data: existing } = await supabaseAdmin
       .from("course_enrollments")
-      .select(
-        `
-        *,
-        courses(id, title, name),
-        profiles(id, email, full_name)
-      `
-      )
-      .order("created_at", { ascending: false });
+      .select("*")
+      .eq("course_id", course_id)
+      .eq("student_id", user.id)
+      .maybeSingle();
+
+    if (existing) {
+      return NextResponse.json({
+        success: true,
+        enrollment: existing,
+        message: "You already requested enrollment.",
+      });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from("course_enrollments")
+      .insert([
+        {
+          course_id,
+          student_id: user.id,
+          payment_method,
+          payer_name,
+          wallet_number,
+          payment_reference,
+          payment_notes,
+          payment_screenshot_url,
+          transfer_time,
+          payment_status: "pending",
+          enrollment_status: "pending",
+        },
+      ])
+      .select()
+      .single();
 
     if (error) {
       return NextResponse.json(
-        { error: error.message, enrollments: [] },
+        { error: error.message || "Failed to enroll" },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ enrollments: data || [] });
-  } catch {
-    return NextResponse.json(
-      { error: "Failed to load enrollments", enrollments: [] },
-      { status: 500 }
-    );
-  }
-}
-
-export async function PATCH(req: NextRequest) {
-  try {
-    const body = await req.json();
-
-    if (!body.id) {
-      return NextResponse.json({ error: "Enrollment id required" }, { status: 400 });
-    }
-
-    const updateData = {
-      enrollment_status: body.enrollment_status,
-      payment_status: body.payment_status,
-      approved_at: body.enrollment_status === "approved" ? new Date().toISOString() : null,
-    };
-
-    const { error } = await adminSupabase
-      .from("course_enrollments")
-      .update(updateData)
-      .eq("id", body.id);
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ success: true });
-  } catch {
-    return NextResponse.json(
-      { error: "Failed to update enrollment" },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      success: true,
+      enrollment: data,
+    });
+  } catch (error) {
+    console.error("Enrollment error:", error);
+    return NextResponse.json({ error: "Failed to enroll" }, { status: 500 });
   }
 }

@@ -37,9 +37,25 @@ export default function CourseEnrollCard({
     );
   }
 
+  if (enrollmentStatus === "rejected") {
+    return (
+      <div className="rounded-3xl border border-red-200 bg-red-50 p-6 shadow-sm">
+        <h3 className="text-xl font-bold text-red-800">
+          Enrollment rejected
+        </h3>
+        <p className="mt-2 text-red-700">
+          Please contact the academy for more details.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-3xl border border-[var(--memz-border)] bg-white p-6 shadow-sm">
-      <h3 className="text-xl font-bold">Want to join this course?</h3>
+      <h3 className="text-xl font-bold text-[var(--memz-text)]">
+        Want to join this course?
+      </h3>
+
       <p className="mt-2 text-[var(--memz-muted)]">
         Open the enrollment page and submit your payment proof.
       </p>
