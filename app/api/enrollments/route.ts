@@ -30,6 +30,28 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
 
+    if (!body.course_id) {
+      return NextResponse.json(
+        { error: "Course id is required" },
+        { status: 400 }
+      );
+    }
+
+    const { data: existing } = await supabaseAdmin
+      .from("course_enrollments")
+      .select("*")
+      .eq("course_id", body.course_id)
+      .eq("student_id", user.id)
+      .maybeSingle();
+
+    if (existing) {
+      return NextResponse.json({
+        success: true,
+        enrollment: existing,
+        message: "You already requested enrollment.",
+      });
+    }
+
     const { data, error } = await supabaseAdmin
       .from("course_enrollments")
       .insert([
@@ -51,11 +73,18 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json(
+        { error: error.message || "Failed to enroll" },
+        { status: 500 }
+      );
     }
 
-    return NextResponse.json({ success: true, enrollment: data });
-  } catch {
+    return NextResponse.json({
+      success: true,
+      enrollment: data,
+    });
+  } catch (error) {
+    console.error("Enrollment POST error:", error);
     return NextResponse.json({ error: "Failed to enroll" }, { status: 500 });
   }
 }

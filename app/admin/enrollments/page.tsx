@@ -40,6 +40,7 @@ export default function AdminEnrollmentsPage() {
   async function loadEnrollments() {
     try {
       setLoading(true);
+      setMessage("");
 
       const res = await fetch("/api/admin/enrollments");
       const data = await res.json();
@@ -62,6 +63,8 @@ export default function AdminEnrollmentsPage() {
     status: "approved" | "rejected"
   ) {
     try {
+      setMessage("");
+
       const res = await fetch("/api/admin/enrollments", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -99,7 +102,7 @@ export default function AdminEnrollmentsPage() {
               Enrollment Requests
             </h1>
             <p className="mt-2 text-[var(--memz-muted)]">
-              Review payments and approve students.
+              Review student payments and approve access to course videos.
             </p>
           </div>
 
@@ -110,11 +113,13 @@ export default function AdminEnrollmentsPage() {
           ) : null}
 
           {loading ? (
-            <p className="text-[var(--memz-muted)]">Loading...</p>
+            <p className="text-[var(--memz-muted)]">Loading enrollments...</p>
           ) : items.length === 0 ? (
-            <p className="text-[var(--memz-muted)]">
-              No enrollment requests yet.
-            </p>
+            <div className="rounded-3xl border border-[var(--memz-border)] bg-white p-8 shadow-sm">
+              <p className="text-[var(--memz-muted)]">
+                No enrollment requests yet.
+              </p>
+            </div>
           ) : (
             <div className="grid gap-4">
               {items.map((item) => (
@@ -122,53 +127,87 @@ export default function AdminEnrollmentsPage() {
                   key={item.id}
                   className="rounded-3xl border border-[var(--memz-border)] bg-white p-6 shadow-sm"
                 >
-                  <h2 className="text-xl font-bold text-[var(--memz-text)]">
-                    {item.courses?.title || item.courses?.name || "Course"}
-                  </h2>
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                      <h2 className="text-xl font-bold text-[var(--memz-text)]">
+                        {item.courses?.title ||
+                          item.courses?.name ||
+                          "Untitled Course"}
+                      </h2>
 
-                  <p className="mt-2 text-sm text-[var(--memz-muted)]">
-                    Student:{" "}
-                    {item.profiles?.full_name ||
-                      item.profiles?.email ||
-                      item.student_id}
-                  </p>
+                      <p className="mt-2 text-sm text-[var(--memz-muted)]">
+                        Student:{" "}
+                        {item.profiles?.full_name ||
+                          item.profiles?.email ||
+                          item.student_id}
+                      </p>
+                    </div>
 
-                  <div className="mt-4 grid gap-2 text-sm text-[var(--memz-text)]">
-                    <p>Enrollment: {item.enrollment_status || "-"}</p>
-                    <p>Payment: {item.payment_status || "-"}</p>
-                    <p>Method: {item.payment_method || "-"}</p>
-                    <p>Payer Name: {item.payer_name || "-"}</p>
-                    <p>Sender Wallet: {item.wallet_number || "-"}</p>
-                    <p>Reference: {item.payment_reference || "-"}</p>
+                    <div className="rounded-2xl bg-[var(--memz-soft)] px-4 py-2 text-sm font-semibold">
+                      {item.enrollment_status || "pending"}
+                    </div>
+                  </div>
+
+                  <div className="mt-5 grid gap-3 text-sm text-[var(--memz-text)] md:grid-cols-2">
                     <p>
-                      Transfer Time:{" "}
+                      <strong>Payment Status:</strong>{" "}
+                      {item.payment_status || "pending"}
+                    </p>
+
+                    <p>
+                      <strong>Payment Method:</strong>{" "}
+                      {item.payment_method || "-"}
+                    </p>
+
+                    <p>
+                      <strong>Payer Name:</strong> {item.payer_name || "-"}
+                    </p>
+
+                    <p>
+                      <strong>Sender Wallet:</strong>{" "}
+                      {item.wallet_number || "-"}
+                    </p>
+
+                    <p>
+                      <strong>Reference:</strong>{" "}
+                      {item.payment_reference || "-"}
+                    </p>
+
+                    <p>
+                      <strong>Transfer Time:</strong>{" "}
                       {item.transfer_time
                         ? new Date(item.transfer_time).toLocaleString()
                         : "-"}
                     </p>
-                    <p>Notes: {item.payment_notes || "-"}</p>
 
-                    {item.payment_screenshot_url ? (
-                      <a
-                        href={item.payment_screenshot_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="font-semibold text-[var(--memz-primary)]"
-                      >
-                        View Payment Screenshot
-                      </a>
-                    ) : (
-                      <p>No screenshot uploaded</p>
-                    )}
+                    <p className="md:col-span-2">
+                      <strong>Notes:</strong> {item.payment_notes || "-"}
+                    </p>
+
+                    <div className="md:col-span-2">
+                      <strong>Screenshot:</strong>{" "}
+                      {item.payment_screenshot_url ? (
+                        <a
+                          href={item.payment_screenshot_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-semibold text-[var(--memz-primary)]"
+                        >
+                          View Payment Screenshot
+                        </a>
+                      ) : (
+                        <span>-</span>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="mt-5 flex gap-3">
+                  <div className="mt-6 flex flex-wrap gap-3">
                     <button
                       type="button"
                       onClick={() => updateEnrollment(item.id, "approved")}
                       className="rounded-2xl bg-green-600 px-4 py-2 text-sm font-semibold text-white"
                     >
-                      Approve
+                      Approve & Mark Paid
                     </button>
 
                     <button
