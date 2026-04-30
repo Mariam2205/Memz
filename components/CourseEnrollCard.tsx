@@ -21,8 +21,6 @@ export default function CourseEnrollCard({
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const isApproved = enrollmentStatus === "approved";
-
   async function enroll() {
     try {
       setLoading(true);
@@ -67,12 +65,10 @@ export default function CourseEnrollCard({
     }
   }
 
-  if (isApproved) {
+  if (enrollmentStatus === "approved") {
     return (
       <div className="rounded-3xl border border-[var(--memz-border)] bg-white p-6 shadow-sm">
-        <h3 className="text-xl font-bold text-[var(--memz-text)]">
-          You are enrolled
-        </h3>
+        <h3 className="text-xl font-bold">You are enrolled</h3>
         <p className="mt-2 text-[var(--memz-muted)]">
           You can now view the course videos.
         </p>
@@ -95,9 +91,7 @@ export default function CourseEnrollCard({
 
   return (
     <div className="rounded-3xl border border-[var(--memz-border)] bg-white p-6 shadow-sm">
-      <h3 className="text-xl font-bold text-[var(--memz-text)]">
-        Enroll in this course
-      </h3>
+      <h3 className="text-xl font-bold">Enroll in this course</h3>
 
       <p className="mt-2 text-sm text-[var(--memz-muted)]">
         Add your payment details, then admin will approve your enrollment.
@@ -145,7 +139,9 @@ export default function CourseEnrollCard({
           Login first if you are not signed in
         </Link>
 
-        {message ? <p className="text-sm text-[var(--memz-primary)]">{message}</p> : null}
+        {message ? (
+          <p className="text-sm text-[var(--memz-primary)]">{message}</p>
+        ) : null}
       </div>
     </div>
   );
