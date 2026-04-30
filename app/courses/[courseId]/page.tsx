@@ -113,6 +113,37 @@ export default async function CourseDetailsPage({
           <div className="mt-6 flex flex-wrap gap-3">
             <span className="rounded-full bg-[var(--memz-soft)] px-4 py-2 text-sm font-medium">
               {course.is_free ? "Free" : `$${course.price ?? 0}`}
+              <div className="mt-6 grid gap-3 rounded-2xl border border-white/10 bg-white/5 p-5 text-white/80">
+  <p>
+    <strong>Payment Way:</strong>{" "}
+    {course.pricing_type === "level"
+      ? "By Level"
+      : course.pricing_type === "month"
+      ? "Monthly"
+      : "By Course"}
+  </p>
+
+  <p>
+    <strong>Age Category:</strong> {course.age_category || "Not added yet"}
+  </p>
+
+  <p>
+    <strong>Starting Date:</strong>{" "}
+    {course.starting_date
+      ? new Date(course.starting_date).toLocaleDateString()
+      : "Not added yet"}
+  </p>
+
+  <div>
+    <strong>Level Description:</strong>
+    <p>{course.level_description || "Not added yet"}</p>
+  </div>
+
+  <div>
+    <strong>Course Objectives:</strong>
+    <p>{course.course_objectives || "Not added yet"}</p>
+  </div>
+</div>
             </span>
 
             <span className="rounded-full bg-yellow-100 px-4 py-2 text-sm font-medium text-yellow-800">

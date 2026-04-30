@@ -14,12 +14,30 @@ type Course = {
   short_description?: string | null;
   is_free: boolean | null;
   price: number | null;
+  pricing_type: string | null;
+  level_description: string | null;
+  age_category: string | null;
+  course_objectives: string | null;
+  starting_date: string | null;
 };
 
 export default async function CoursesPage() {
   const { data: courses, error } = await supabase
     .from("courses")
-    .select("id, title, name, description, short_description, is_free, price")
+.select(`
+  id,
+  title,
+  name,
+  description,
+  short_description,
+  is_free,
+  price,
+  pricing_type,
+  level_description,
+  age_category,
+  course_objectives,
+  starting_date
+`)
     .order("created_at", { ascending: false });
 
   return (

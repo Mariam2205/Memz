@@ -35,6 +35,13 @@ export default function CourseForm({ subjects, levels }: Props) {
   const [isFree, setIsFree] = useState(true);
   const [price, setPrice] = useState("0");
   const [isPublished, setIsPublished] = useState(false);
+
+  const [pricingType, setPricingType] = useState("course");
+  const [levelDescription, setLevelDescription] = useState("");
+  const [ageCategory, setAgeCategory] = useState("");
+  const [courseObjectives, setCourseObjectives] = useState("");
+  const [startingDate, setStartingDate] = useState("");
+
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -59,6 +66,12 @@ export default function CourseForm({ subjects, levels }: Props) {
           is_free: isFree,
           price: isFree ? 0 : Number(price || 0),
           is_published: isPublished,
+
+          pricing_type: pricingType,
+          level_description: levelDescription,
+          age_category: ageCategory,
+          course_objectives: courseObjectives,
+          starting_date: startingDate || null,
         }),
       });
 
@@ -78,6 +91,11 @@ export default function CourseForm({ subjects, levels }: Props) {
       setIsFree(true);
       setPrice("0");
       setIsPublished(false);
+      setPricingType("course");
+      setLevelDescription("");
+      setAgeCategory("");
+      setCourseObjectives("");
+      setStartingDate("");
 
       window.location.reload();
     } catch (error) {
@@ -219,6 +237,71 @@ export default function CourseForm({ subjects, levels }: Props) {
           />
         </div>
       ) : null}
+
+      <div>
+        <label className="mb-2 block text-sm font-medium text-white/85">
+          Payment Way
+        </label>
+        <select
+          value={pricingType}
+          onChange={(e) => setPricingType(e.target.value)}
+          className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none focus:border-[var(--memz-primary)]"
+        >
+          <option value="course">By Course</option>
+          <option value="level">By Level</option>
+          <option value="month">Monthly</option>
+        </select>
+      </div>
+
+      <div>
+        <label className="mb-2 block text-sm font-medium text-white/85">
+          Age Category
+        </label>
+        <input
+          value={ageCategory}
+          onChange={(e) => setAgeCategory(e.target.value)}
+          placeholder="Example: 8-12 years"
+          className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none placeholder:text-white/35 focus:border-[var(--memz-primary)]"
+        />
+      </div>
+
+      <div>
+        <label className="mb-2 block text-sm font-medium text-white/85">
+          Starting Date
+        </label>
+        <input
+          type="date"
+          value={startingDate}
+          onChange={(e) => setStartingDate(e.target.value)}
+          className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none focus:border-[var(--memz-primary)]"
+        />
+      </div>
+
+      <div>
+        <label className="mb-2 block text-sm font-medium text-white/85">
+          Level Description
+        </label>
+        <textarea
+          value={levelDescription}
+          onChange={(e) => setLevelDescription(e.target.value)}
+          rows={3}
+          placeholder="Describe the level for this course"
+          className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none placeholder:text-white/35 focus:border-[var(--memz-primary)]"
+        />
+      </div>
+
+      <div>
+        <label className="mb-2 block text-sm font-medium text-white/85">
+          Course Objectives
+        </label>
+        <textarea
+          value={courseObjectives}
+          onChange={(e) => setCourseObjectives(e.target.value)}
+          rows={4}
+          placeholder="What will students learn?"
+          className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none placeholder:text-white/35 focus:border-[var(--memz-primary)]"
+        />
+      </div>
 
       <button
         type="submit"

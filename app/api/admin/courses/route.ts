@@ -85,17 +85,21 @@ export async function POST(req: NextRequest) {
 
     const { data, error } = await adminSupabase
       .from("courses")
-      .insert([
-        {
-          title: title || name,
-          name: name || title,
-          slug,
-          description,
-          description_html,
-          subject_id,
-          level_id,
-        },
-      ])
+      .insert([{
+  title,
+  name,
+  description,
+  subject_id,
+  level_id,
+
+  price: Number(body.price || 0),
+  is_free: Boolean(body.is_free),
+  pricing_type: body.pricing_type || "course",
+  level_description: body.level_description || null,
+  age_category: body.age_category || null,
+  course_objectives: body.course_objectives || null,
+  starting_date: body.starting_date || null,
+}])
       .select()
       .single();
 
