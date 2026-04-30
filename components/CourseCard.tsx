@@ -41,7 +41,21 @@ export default function CourseCard({ course }: { course: Course }) {
         {course.level_description ? <p>{course.level_description}</p> : null}
         {course.course_objectives ? <p>{course.course_objectives}</p> : null}
       </div>
+<div className="mt-5 flex gap-2">
+  <Link
+    href={`/courses/${course.id}`}
+    className="rounded-2xl border border-[var(--memz-border)] bg-white px-4 py-2 text-sm font-semibold"
+  >
+    View Details
+  </Link>
 
+  <Link
+    href={`/courses/${course.id}/enroll`}
+    className="rounded-2xl bg-gradient-to-r from-[var(--memz-primary)] to-[var(--memz-secondary)] px-4 py-2 text-sm font-semibold text-white"
+  >
+    Enroll
+  </Link>
+</div>
       <div className="mt-5 flex gap-2">
         <Link
           href={`/courses/${course.id}`}
