@@ -53,7 +53,6 @@ export default function MyCoursesPage() {
         return;
       }
 
-      setItems((data || []) as Enrollment[]);
     } finally {
       setLoading(false);
     }

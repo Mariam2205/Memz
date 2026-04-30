@@ -56,21 +56,6 @@ export default function CourseCard({ course }: { course: Course }) {
     Enroll
   </Link>
 </div>
-      <div className="mt-5 flex gap-2">
-        <Link
-          href={`/courses/${course.id}`}
-          className="rounded-2xl border border-[var(--memz-border)] bg-white px-4 py-2 text-sm font-semibold"
-        >
-          View
-        </Link>
-
-        <Link
-          href={`/courses/${course.id}/enroll`}
-          className="rounded-2xl bg-gradient-to-r from-[var(--memz-primary)] to-[var(--memz-secondary)] px-4 py-2 text-sm font-semibold text-white"
-        >
-          Enroll
-        </Link>
-      </div>
     </div>
   );
 }
